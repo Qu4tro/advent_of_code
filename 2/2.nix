@@ -16,7 +16,7 @@ let lib = import <nixpkgs/lib>;
     #       Parameter that indicates where in the memory does
     #       it start to execute the instructions
     #    - memory : [int]
-    #       A list of integeres, representing the memory of our computer
+    #       A list of integers, representing the memory of our computer
     #       It contains the instructions it's running plus additional data
     # Returns:
     #    - memory : [int]

@@ -1,32 +1,34 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    strings = lib.strings;
-    lists = lib.lists;
-    strict = (x: builtins.deepSeq x x);
+    lazy = import ../lazy-extra.nix;
+    math = import ../math-extra.nix;
+    func = import ../func-extra.nix;
 
-    sum = lists.foldr (a: b: a + b) 0;
-    while = (p: f:
-      let go = (x: if p x then go (f x) else x);
-      in go
-    );
+    max = lib.trivial.max;
+    str = lib.strings;
 
-    inputFile = builtins.readFile ./input;
-    rawList = lists.remove "" (strings.splitString "\n" inputFile);
-    moduleMassList = builtins.map strings.toInt rawList;
+    inputFile = str.removeSuffix "\n" (builtins.readFile ./input);
+    inputList = str.splitString "\n" inputFile;
+    moduleMassList = builtins.map str.toInt inputList;
 
-    fuelPerMass = x: x / 3 - 2;
+    fuelPerMass = x: 
+      let result = x / 3 - 2;
+      in max 0 result;
 
-    part1 = sum (map fuelPerMass moduleMassList);
+    part1 = math.sum (map fuelPerMass moduleMassList);
 
-    rocketEquationSteps = (initialMass: (
-      while (x: builtins.head x > 0) (x: 
-        let fuelForFuel = fuelPerMass (builtins.head x);
-        in [fuelForFuel] ++ x
-      ) [initialMass]
-    ));
-    rocketEquation = (m: sum (lists.tail (lists.init (rocketEquationSteps m))));
+    rocketEquationStep = {totalFuel, lastIncrement}:
+        let increment = fuelPerMass lastIncrement;
+        in {totalFuel = totalFuel + increment; lastIncrement = increment; };
 
-    part2 = sum (map rocketEquation moduleMassList);
+    rocketEquationSteps = func.while
+      ({totalFuel, lastIncrement}: lastIncrement > 0)
+      rocketEquationStep;
 
-in strict {part1 = part1; part2 = part2; }
+    rocketEquation = moduleMass: 
+      (rocketEquationSteps {totalFuel = 0; lastIncrement = moduleMass;}).totalFuel;
+
+    part2 = math.sum (map rocketEquation moduleMassList);
+
+in lazy.strict {part1 = part1; part2 = part2; }

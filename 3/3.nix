@@ -97,4 +97,4 @@ let lib = import <nixpkgs/lib>;
               (lists.remove centralPortPosition intersections)
             );
 
-in lazy.strict part2
+in lazy.strict {part1 = part1; part2 = part2; }

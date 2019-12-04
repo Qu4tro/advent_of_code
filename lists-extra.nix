@@ -5,18 +5,6 @@ let lib = import <nixpkgs/lib>;
 
     replace = (xs: i: v: (lists.take i xs) ++ [v] ++ (lists.drop (i + 1) xs));
 
-    listIntersection = (xs: ys: 
-      if xs == [] || ys == [] then
-        []
-      else let h = lists.head xs;
-               t = lists.tail xs;
-      in if lists.elem h ys then 
-        [h] ++ listIntersection t ys
-      else 
-        listIntersection t ys
-    );
-    listIntersectionMany = (xss: lists.foldl listIntersection (lists.head xss) xss);
-
     scanl = (op: accum: list: 
       [accum] ++ (
         if list == [] then 
@@ -52,5 +40,16 @@ let lib = import <nixpkgs/lib>;
                       else xs
     );
 
+    upTo = n: lists.range 0 n;
 
-in { inherit cartesianProduct dropWhile listIntersection listIntersectionMany replace scanl takeWhile ; }
+    concat = lists.foldl (a: b: a ++ b) [];
+
+    minimumBy = op: xs: 
+      let h = lists.head xs;
+          t = lists.tail xs;
+          minBy = op: x: y: if (op x <= op y) then x else y;
+
+      in if lists.length xs == 1 then h  
+                                 else minBy op h (minimumBy op t);
+
+in { inherit cartesianProduct concat dropWhile minimumBy replace scanl takeWhile upTo ; }

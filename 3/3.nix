@@ -1,26 +1,24 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    math = import ../math-extra.nix;
-    lazy = import ../lazy-extra.nix;
-    llists = import ../lists-extra.nix;
+    inherit (lib.lists) head last tail filter remove zipLists;
+    inherit (lib.strings) toInt splitString substring removePrefix;
+    inherit (lib.trivial) min max;
 
-    min = lib.trivial.min;
-    max = lib.trivial.max;
+    inherit (import ../math-extra.nix) abs;
+    inherit (import ../lazy-extra.nix) strict;
+    inherit (import ../lists-extra.nix) concat minimumBy cartesianProduct scanl;
+    inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
 
-    lists = lib.lists;
-    str = lib.strings;
+    wires = splitAndMapFromTrimmedFile ./input "\n" (splitString ",");
+    wire1 = head wires;
+    wire2 = last wires;
 
-    inputFile = str.removeSuffix "\n" (builtins.readFile ./input);
-    inputList = str.splitString "\n" inputFile;
-    wires = map (str.splitString ",") inputList;
-
-
-    manhattanDistance = (fst: snd: math.abs (snd.x - fst.x) + math.abs (snd.y - fst.y));
+    manhattanDistance = (fst: snd: abs (snd.x - fst.x) + abs (snd.y - fst.y));
 
     applyStep = ({x, y}: step:
-      let direction = str.substring 0 1 step;
-          distance = str.toInt (str.removePrefix direction step);
+      let direction = substring 0 1 step;
+          distance = toInt (removePrefix direction step);
 
       in if direction == "R" then
         { x = x + distance; y = y; }
@@ -38,63 +36,74 @@ let lib = import <nixpkgs/lib>;
       (fst.y == y && (min fst.x snd.x) <= x && (max fst.x snd.x) >= x)
     );
 
-    findIntersections = (allWires:
+    findIntersections = (wire1: wire2:
       let 
-          crossingPoint = ({fst, snd}:
-          lists.filter (p: segmentContainsPoint fst p && segmentContainsPoint snd p) 
+        crossingPoint = ({fst, snd}:
+          filter (p: segmentContainsPoint fst p && segmentContainsPoint snd p) 
             (if fst.fst.x == fst.snd.x then 
               [ {x = fst.fst.x; y = snd.fst.y;}]
              else
               [ {x = snd.fst.x; y = fst.fst.y;}]
             )
+        );
+
+        segments1 = zipLists wire1 (tail wire1);
+        segments2 = zipLists wire2 (tail wire2);
+
+        intersections = 
+          remove [] (
+            map crossingPoint 
+            (cartesianProduct segments1 segments2)
           );
 
-          segments = map (ps: (lists.zipLists ps (lists.tail ps))) allWires;
-          wire1 = lists.head segments;
-          wire2 = lists.last segments;
-
-          rawIntersections = map crossingPoint (llists.cartesianProduct wire1 wire2);
-          intersections = lists.remove [] rawIntersections;
-
-      in llists.concat intersections
+      in concat intersections
     );
 
 
-    pathOf = llists.scanl applyStep;
-
     centralPortPosition = {x = 0; y = 0;};
-    wiresPathEdges = map (pathOf centralPortPosition) wires;
-    intersections = findIntersections wiresPathEdges;
+    pathOf = scanl applyStep centralPortPosition;
+    wire1Path = pathOf wire1;
+    wire2Path = pathOf wire2;
 
-    part1 = manhattanDistance centralPortPosition
-            (llists.minimumBy 
-              (manhattanDistance centralPortPosition)
-              (lists.remove centralPortPosition intersections)
-            );
+    intersections =
+      remove centralPortPosition
+        (findIntersections wire1Path wire2Path);
+
+    part1 =
+      manhattanDistance centralPortPosition
+        (minimumBy
+          (manhattanDistance centralPortPosition)
+          intersections
+        );
 
 
     stepDistance = manhattanDistance;
     walkingDistance = (path: targetPosition:
       if path == [] then abort "Aaaaaahhhh!" else
-      let startingPosition = lists.head path;
-          nextPosition = lists.head (lists.tail path);
-          remainingPath = lists.tail path;
-       in if segmentContainsPoint {fst = startingPosition; snd = nextPosition;} targetPosition then
+
+      let startingPosition = head path;
+          nextPosition = head (tail path);
+          remainingPath = tail path;
+          nextPathContainsTarget =
+            segmentContainsPoint
+                {fst = startingPosition; snd = nextPosition;} targetPosition;
+       in if nextPathContainsTarget then
             stepDistance startingPosition targetPosition
           else
-            stepDistance startingPosition nextPosition + walkingDistance remainingPath targetPosition
+            stepDistance startingPosition nextPosition
+            + walkingDistance remainingPath targetPosition
     );
 
     summedWalkingDistance = (path1: path2: targetPosition: 
-      walkingDistance path1 targetPosition + walkingDistance path2 targetPosition
+      walkingDistance path1 targetPosition
+      + walkingDistance path2 targetPosition
     );
 
-    wire1PathEdge = lists.head wiresPathEdges;
-    wire2PathEdge = lists.last wiresPathEdges;
-    part2 = (summedWalkingDistance wire1PathEdge wire2PathEdge)
-            (llists.minimumBy 
-              (summedWalkingDistance wire1PathEdge wire2PathEdge)
-              (lists.remove centralPortPosition intersections)
-            );
+    part2 =
+      (summedWalkingDistance wire1Path wire2Path)
+        (minimumBy
+          (summedWalkingDistance wire1Path wire2Path)
+          intersections
+        );
 
-in lazy.strict {part1 = part1; part2 = part2; }
+in strict { inherit part1 part2 ; }

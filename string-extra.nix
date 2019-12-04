@@ -1,12 +1,10 @@
-#!/usr/bin/nix-instantiate --eval
-
 let lib = import <nixpkgs/lib>;
     lists = lib.lists;
     str = lib.strings;
     listsExtra = import ./lists-extra.nix;
 
     splitAndMap = (delimiter: func: xs: 
-      func (str.splitString delimiter xs)
+      map func (str.splitString delimiter xs)
     );
     trim = (xs: 
       let isWhitespace = 
@@ -14,7 +12,7 @@ let lib = import <nixpkgs/lib>;
             
           chars = str.stringToCharacters xs;
           trimFront = listsExtra.dropWhile isWhitespace;
-          trimBack = listsExtra.takeWhile (x: isWhitespace x == false);
+          trimBack = xs: lists.reverseList (trimFront (lists.reverseList xs));
 
       in str.concatStrings (trimBack (trimFront chars))
     );

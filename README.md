@@ -1,2 +1,1 @@
-# advent_of_code
-Advent of Code in Nix
+# Advent of Code in Nix

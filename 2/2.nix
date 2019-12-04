@@ -1,15 +1,14 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    lists = lib.lists;
-    strings = lib.strings;
+    inherit (lib.lists) head findFirst range;
+    inherit (lib.strings) toInt;
 
-    strict = (import ../lazy-extra.nix).strict;
-    replace = (import ../lists-extra.nix).replace;
-    cartesianProduct = (import ../lists-extra.nix).cartesianProduct;
+    inherit (import ../lazy-extra.nix) strict;
+    inherit (import ../lists-extra.nix) replace cartesianProduct;
+    inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
 
-    inputFile = strings.removeSuffix "\n" (builtins.readFile ./input);
-    memory = builtins.map strings.toInt (strings.splitString "," inputFile);
+    memory = splitAndMapFromTrimmedFile ./input "," toInt;
 
     # Our compute function
     # Params:
@@ -27,40 +26,39 @@ let lib = import <nixpkgs/lib>;
       in
         # We start by checking for stop conditions.
         # In this case, we know we should stop when we encounter a 99
-        if op == 99 then
-          mem
+        if op == 99 then mem else
 
         # Otherwise, let's figure out the instruction and prepare the execution
-        else let
-            opF =
-              if op == 1 then
-                builtins.add
-              else if op == 2 then
-                builtins.mul
-              else
-                # This should not happen according to spec
-                builtins.abort "something went wrong.";
+        let
+          opF =
+            if op == 1 then
+              builtins.add
+            else if op == 2 then
+              builtins.mul
+            else
+              # This should not happen according to spec
+              builtins.abort "something went wrong.";
 
-            # Let's define all the parameters: p1, p2, p3
-            # Each parameter is a pointer for a location in memory
-            p1 = builtins.elemAt mem (iPointer + 1);
-            p2 = builtins.elemAt mem (iPointer + 2);
-            p3 = builtins.elemAt mem (iPointer + 3);
+          # Let's define all the parameters: p1, p2, p3
+          # Each parameter is a pointer for a location in memory
+          p1 = builtins.elemAt mem (iPointer + 1);
+          p2 = builtins.elemAt mem (iPointer + 2);
+          p3 = builtins.elemAt mem (iPointer + 3);
 
-            # And finally fetch the values of the first and second
-            # parameter from memory
-            v1 = builtins.elemAt mem p1;
-            v2 = builtins.elemAt mem p2;
+          # And finally fetch the values of the first and second
+          # parameter from memory
+          v1 = builtins.elemAt mem p1;
+          v2 = builtins.elemAt mem p2;
 
 
-          in
-            let updatedMemory = replace mem p3 (opF v1 v2);
-            in computeInstructionsF (iPointer + 4) updatedMemory
+        in
+          let updatedMemory = replace mem p3 (opF v1 v2);
+          in computeInstructionsF (iPointer + 4) updatedMemory
     );
 
     # We'll always start at 0, so let's create a helper function for that
     # We'll also always want to grab the head and return it
-    compute_and_return = (mem: lists.head (computeInstructionsF 0 mem));
+    compute_and_return = (mem: head (computeInstructionsF 0 mem));
 
     # Inputs noun and verb into memory to fix the gravity assistance
     restoreGravityAssist = (mem: noun: verb: replace (replace mem 1 noun) 2 verb);
@@ -77,11 +75,11 @@ let lib = import <nixpkgs/lib>;
     fixToNum = ({fst, snd}: 100 * fst + snd);
 
     # Let's try them all
-    findRightFix = lists.findFirst 
+    findRightFix = findFirst 
         ({fst, snd}: (compute_and_return (restoreGravityAssist memory fst snd)) == magicNumber)
         (builtins.abort "No solution found. We need to abort!!")
-        (cartesianProduct (lists.range 1 99) (lists.range 1 99));
+        (cartesianProduct (range 1 99) (range 1 99));
 
     part2 = fixToNum findRightFix;
 
-in strict {part1 = part1; part2 = part2; }
+in strict { inherit part1 part2 ; }

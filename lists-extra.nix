@@ -1,18 +1,17 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    minBy = (import ./func-extra.nix).minBy;
+    inherit (lib.lists) head tail take drop range length foldl elemAt;
+    inherit (import ./func-extra.nix) minBy;
 
-    lists = lib.lists;
-
-    replace = (xs: i: v: (lists.take i xs) ++ [v] ++ (lists.drop (i + 1) xs));
+    replace = (xs: i: v: (take i xs) ++ [v] ++ (drop (i + 1) xs));
 
     scanl = (op: accum: list: 
       [accum] ++ (
         if list == [] then [] else
 
-        let h = lists.head list;
-            t = lists.tail list;
+        let h = head list;
+            t = tail list;
         in scanl op (op accum h) t
         )
     );
@@ -28,8 +27,8 @@ let lib = import <nixpkgs/lib>;
     takeWhile = (p: xs: 
       if xs == [] then [] else
 
-      let h = lists.head xs;
-          t = lists.tail xs;
+      let h = head xs;
+          t = tail xs;
        in if p h then [h] ++ (takeWhile p t)
                  else []
     );
@@ -37,55 +36,52 @@ let lib = import <nixpkgs/lib>;
     dropWhile = (p: xs: 
       if xs == [] then [] else
 
-      let h = lists.head xs;
-          t = lists.tail xs;
+      let h = head xs;
+          t = tail xs;
        in if p h then (dropWhile p t)
                  else xs
     );
 
-    upTo = n: lists.range 0 n;
+    upTo = n: range 0 n;
 
-    concat = lists.foldl (a: b: a ++ b) [];
+    concat = foldl (a: b: a ++ b) [];
 
     minimumBy = op: xs: 
-      let h = lists.head xs;
-          t = lists.tail xs;
-      in if lists.length xs == 1 then h else
+      let h = head xs;
+          t = tail xs;
+      in if length xs == 1 then h else
          minBy op h (minimumBy op t);
 
     anyBy2 = pred: xs: (
-      if lists.length xs < 2 then false else
+      if length xs < 2 then false else
 
-      let fst = lists.head xs;
-          tail = lists.tail xs;
-          snd = lists.head tail;
-      in pred fst snd || anyBy2 pred tail
+      let fst = elemAt xs 0;
+          snd = elemAt xs 1;
+      in pred fst snd || anyBy2 pred (tail xs)
     );
 
     allBy2 = pred: xs: (
-      if lists.length xs < 2 then true else
+      if length xs < 2 then true else
 
-      let fst = lists.head xs;
-          tail = lists.tail xs;
-          snd = lists.head tail;
-      in pred fst snd && allBy2 pred tail
+      let fst = elemAt xs 0;
+          snd = elemAt xs 1;
+      in pred fst snd && allBy2 pred (tail xs)
     );
 
     findFirst2 = pred: default: xs: (
-      if lists.length xs < 0 then default else
+      if length xs < 0 then default else
 
-      let fst = lists.elemAt xs 0;
-          snd = lists.elemAt xs 1;
-          tail = lists.tail xs;
+      let fst = elemAt xs 0;
+          snd = elemAt xs 1;
       in if pred fst snd then {fst = fst; snd = snd;}
-                         else findFirst2 pred default tail
+                         else findFirst2 pred default (tail xs)
     );
 
     span = pred: xs: (
       if xs == [] then {fst = []; snd = [];} else
 
-      let h = lists.head xs;
-          t = lists.tail xs;
+      let h = head xs;
+          t = tail xs;
       in if pred h then let spanRec = span pred t;
                         in {fst = [h] ++ spanRec.fst; snd = spanRec.snd;}
          else {fst = []; snd = xs;}
@@ -94,7 +90,7 @@ let lib = import <nixpkgs/lib>;
     groupIntoListBy = pred: xs: (
       if xs == [] then [] else
 
-      let h = lists.head xs;
+      let h = head xs;
           conditionSpan = span (pred h) xs;
 
       in [conditionSpan.fst] ++ (groupIntoListBy pred conditionSpan.snd)

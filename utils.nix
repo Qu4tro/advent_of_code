@@ -1,12 +1,13 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    str = lib.strings;
-    stringsExtra = import ./string-extra.nix;
+    inherit (builtins) readFile;
+    inherit (lib.strings) splitString stringToCharacters concatStrings;
+    inherit (import ./string-extra.nix) splitAndMap trim;
 
     splitAndMapFromTrimmedFile = (path: delimiter: func:
-      stringsExtra.splitAndMap delimiter func
-            (stringsExtra.trim (builtins.readFile path))
+      splitAndMap delimiter func
+            (trim (readFile path))
     );
 
 in { inherit splitAndMapFromTrimmedFile; }

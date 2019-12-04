@@ -1,7 +1,7 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    mod = lib.trivial.mod;
+    inherit (lib.trivial) mod;
 
     sum = lib.lists.foldr (a: b: a + b) 0;
 

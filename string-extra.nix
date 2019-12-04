@@ -1,19 +1,19 @@
 let lib = import <nixpkgs/lib>;
-    lists = lib.lists;
-    str = lib.strings;
-    listsExtra = import ./lists-extra.nix;
+    inherit (lib.lists) reverseList;
+    inherit (lib.strings) splitString stringToCharacters concatStrings;
+    inherit (import ./lists-extra.nix) dropWhile;
 
     splitAndMap = (delimiter: func: xs: 
-      map func (str.splitString delimiter xs)
+      map func (splitString delimiter xs)
     );
     trim = (xs: 
       let isWhitespace = 
             s: s == "\n" || s == "\r" || s == "\t" || s == " ";
             
-          chars = str.stringToCharacters xs;
-          trimFront = listsExtra.dropWhile isWhitespace;
-          trimBack = xs: lists.reverseList (trimFront (lists.reverseList xs));
+          chars = stringToCharacters xs;
+          trimFront = dropWhile isWhitespace;
+          trimBack = xs: reverseList (trimFront (reverseList xs));
 
-      in str.concatStrings (trimBack (trimFront chars))
+      in concatStrings (trimBack (trimFront chars))
     );
 in { inherit splitAndMap trim; }

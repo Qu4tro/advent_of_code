@@ -2,13 +2,12 @@
 
 let lib = import <nixpkgs/lib>;
     inherit (builtins) add mul div;
-    inherit (lib.lists) head last elemAt any reverseList;
+    inherit (lib.lists) last elemAt reverseList;
     inherit (lib.strings) toInt fixedWidthString concatStrings stringToCharacters;
     inherit (lib.trivial) mod;
 
     inherit (import ../queue.nix) emptyQueue dequeue enqueue;
-    inherit (import ../string-extra.nix) stringToDigits;
-    inherit (import ../func-extra.nix) while repeat;
+    inherit (import ../func-extra.nix) while;
     inherit (import ../lazy-extra.nix) strict;
     inherit (import ../lists-extra.nix) replace;
     inherit (import ../utils.nix) splitAndMapFromTrimmedFile;

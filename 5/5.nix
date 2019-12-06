@@ -8,7 +8,7 @@ let lib = import <nixpkgs/lib>;
 
     inherit (import ../queue.nix) emptyQueue dequeue enqueue;
     inherit (import ../string-extra.nix) stringToDigits;
-    inherit (import ../func-extra.nix) while;
+    inherit (import ../func-extra.nix) while repeat;
     inherit (import ../lazy-extra.nix) strict;
     inherit (import ../lists-extra.nix) replace;
     inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
@@ -17,69 +17,36 @@ let lib = import <nixpkgs/lib>;
     immediateMode = "1";
     positionMode = "0";
 
-    op1 = {mem, inQ, outQ, op, iPointer, halted}: (
-      let p1 = elemAt mem (iPointer + 0);
-          p2 = elemAt mem (iPointer + 1);
-          p3 = elemAt mem (iPointer + 2);
-
-          v1 = if elemAt (op.modes) 0 == immediateMode
-                then p1
-                else elemAt mem p1;
-
-          v2 = if elemAt (op.modes) 1 == immediateMode
-                then p2
-                else elemAt mem p2;
-      in { 
-        inherit inQ outQ op halted;
-        mem = replace mem p3 (add v1 v2);
-        iPointer = iPointer + 3;
+    op1 = p1: p2: p3: {mem, inQ, outQ, op, iPointer, halted}: (
+      { inherit inQ outQ op halted; 
+        mem = replace mem p3 (add p1 p2);
+        iPointer = iPointer + 4; 
       }
     );
 
-    op2 = {mem, inQ, outQ, op, iPointer, halted}: (
-      let p1 = elemAt mem (iPointer + 0);
-          p2 = elemAt mem (iPointer + 1);
-          p3 = elemAt mem (iPointer + 2);
-
-          v1 = if elemAt (op.modes) 0 == immediateMode
-                then p1
-                else elemAt mem p1;
-
-          v2 = if elemAt (op.modes) 1 == immediateMode
-                then p2
-                else elemAt mem p2;
-      in { 
+    op2 = p1: p2: p3: {mem, inQ, outQ, op, iPointer, halted}: (
+      { 
         inherit inQ outQ op halted;
-        mem = replace mem p3 (mul v1 v2);
-        iPointer = iPointer + 3;
+        mem = replace mem p3 (mul p1 p2);
+        iPointer = iPointer + 4;
       }
     );
 
-    op3 = {mem, inQ, outQ, op, iPointer, halted}: (
+    op3 = p1: {mem, inQ, outQ, op, iPointer, halted}: (
       let dequeueResult = dequeue inQ;
-          x = builtins.trace (toString mem) mem;
-          p1 = elemAt mem iPointer;
-          
       in { 
         inherit outQ op halted;
         mem = replace mem p1 dequeueResult.value;
         inQ = dequeueResult.updatedQueue;
-        iPointer = iPointer + 1;
+        iPointer = iPointer + 2;
       }
     );
 
-    op4 = {mem, inQ, outQ, op, iPointer, halted}: (
-      let p1 = elemAt mem iPointer;
-          v1 = if elemAt (op.modes) 0 == immediateMode
-                then p1
-                else elemAt mem p1;
-
-          newOutQ = enqueue outQ v1;
-          
-      in { 
+    op4 = p1: {mem, inQ, outQ, op, iPointer, halted}: (
+      { 
         inherit mem inQ op halted;
-        outQ = newOutQ;
-        iPointer = iPointer + 1;
+        outQ = enqueue outQ p1;
+        iPointer = iPointer + 2;
       }
     );
 
@@ -93,56 +60,49 @@ let lib = import <nixpkgs/lib>;
           (stringToDigits opM)))))
     );
 
-    decodeOp = {mem, inQ, outQ, op, iPointer, halted}: (
+    decodeOp = context: (
+      with context;
       let opInt = elemAt mem iPointer;
           opV = mod opInt 100;
           modes = decodeOpModes opInt;
 
-          op = {
-             opV = opV;
-             call = (
-               if opV == 1 then
-                 op1
-               else if opV == 2 then
-                 op2
-               else if opV == 3 then
-                 op3
-               else if opV == 4 then
-                 op4
-               else if opV == 99 then
-                 null
-               else
-               abort (concatStrings [
-                 "Aaaaaahhhh! Unknown opcode: "
-                 (toString opV)
-               ])
-             );
-             modes = modes;
-           };
+          readRef = i: elemAt mem (iPointer + i + 1);
+          readValue = i: (
+            if (elemAt modes i) == immediateMode
+                then elemAt mem (iPointer + i + 1)
+                else elemAt mem (elemAt mem (iPointer + i + 1))
+          );
 
-      in {
-           inherit mem inQ outQ op halted;
-           iPointer = iPointer + 1;
-         }
+
+          op = { opV = opV;
+           opF = (
+             if opV == 1 then
+               op1 (readValue 0) (readValue 1) (readRef 2)
+             else if opV == 2 then
+               op2 (readValue 0) (readValue 1) (readRef 2)
+             else if opV == 3 then
+               op3 (readRef 0)
+             else if opV == 4 then
+               op4 (readValue 0)
+             else if opV == 99 then
+               null
+             else
+               null
+           );
+           modes = modes;
+         };
+
+         halted = if op.opF == null then true else false;
+
+      in context // { op = op; halted = halted; }
     );
 
-    computeStep = context: (
-      let newContext = decodeOp context;
+    computeStep = inContext: (
+      let context = decodeOp inContext;
+          haltConditionTrue = context.op.opV == 99;
 
-          haltConditionTrue =
-            newContext.op.opV == 99
-            || any (x: x != 0) newContext.outQ; # TODO: RemoveTHIS
-
-      in if haltConditionTrue then newContext // { halted = true; }
-                              else newContext.op.call newContext
-      );
-
-    computeStepTest = context: (
-      let newContext = decodeOp context;
-          haltConditionTrue = newContext.op.opV == 99;
-
-      in if haltConditionTrue then newContext // { halted = true; }
-                              else newContext.op.call newContext
+      in if context.halted then context
+                           else context.op.opF context
       );
 
     initialComputationState = mem: inQ:
@@ -158,6 +118,6 @@ let lib = import <nixpkgs/lib>;
         (initialComputationState mem inQ);
 
     inputQueue = enqueue emptyQueue 1;
-    part1 = last ((compute memory inputQueue).outQ);
+    part1 = (compute memory inputQueue);
 
 in strict { inherit part1; }

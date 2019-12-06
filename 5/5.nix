@@ -17,37 +17,42 @@ let lib = import <nixpkgs/lib>;
     immediateMode = "1";
     positionMode = "0";
 
-    op1 = p1: p2: p3: {mem, inQ, outQ, op, iPointer, halted}: (
-      { inherit inQ outQ op halted; 
-        mem = replace mem p3 (add p1 p2);
-        iPointer = iPointer + 4; 
-      }
+    op1 = p1: p2: p3: context: (
+      context // (
+        with context;
+        { mem = replace mem p3 (add p1 p2);
+          iPointer = iPointer + 4; 
+        }
+      )
     );
 
-    op2 = p1: p2: p3: {mem, inQ, outQ, op, iPointer, halted}: (
-      { 
-        inherit inQ outQ op halted;
-        mem = replace mem p3 (mul p1 p2);
-        iPointer = iPointer + 4;
-      }
+    op2 = p1: p2: p3: context: (
+      context // (
+        with context;
+        { mem = replace mem p3 (mul p1 p2);
+          iPointer = iPointer + 4;
+        }
+      )
     );
 
-    op3 = p1: {mem, inQ, outQ, op, iPointer, halted}: (
-      let dequeueResult = dequeue inQ;
-      in { 
-        inherit outQ op halted;
-        mem = replace mem p1 dequeueResult.value;
-        inQ = dequeueResult.updatedQueue;
-        iPointer = iPointer + 2;
-      }
+    op3 = p1: context: (
+      context // (
+        with context;
+        let dequeueResult = dequeue inQ;
+        in { mem = replace mem p1 dequeueResult.value;
+             inQ = dequeueResult.updatedQueue;
+             iPointer = iPointer + 2;
+           }
+      )
     );
 
-    op4 = p1: {mem, inQ, outQ, op, iPointer, halted}: (
-      { 
-        inherit mem inQ op halted;
-        outQ = enqueue outQ p1;
-        iPointer = iPointer + 2;
-      }
+    op4 = p1: context: (
+      context // (
+        with context;
+        { outQ = enqueue outQ p1;
+          iPointer = iPointer + 2;
+        }
+      )
     );
 
     decodeOpModes = opInt: (

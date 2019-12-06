@@ -2,8 +2,8 @@
 
 let lib = import <nixpkgs/lib>;
     inherit (builtins) add mul div;
-    inherit (lib.lists) head foldr elemAt any reverseList;
-    inherit (lib.strings) toInt;
+    inherit (lib.lists) head last elemAt any reverseList;
+    inherit (lib.strings) toInt fixedWidthString concatStrings stringToCharacters;
     inherit (lib.trivial) mod;
 
     inherit (import ../queue.nix) emptyQueue dequeue enqueue;
@@ -14,15 +14,21 @@ let lib = import <nixpkgs/lib>;
     inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
 
     memory = splitAndMapFromTrimmedFile ./input "," toInt;
+    immediateMode = "1";
+    positionMode = "0";
 
     op1 = {mem, inQ, outQ, op, iPointer, halted}: (
       let p1 = elemAt mem (iPointer + 0);
           p2 = elemAt mem (iPointer + 1);
           p3 = elemAt mem (iPointer + 2);
 
-          v1 = elemAt mem p1;
-          v2 = elemAt mem p2;
+          v1 = if elemAt (op.modes) 0 == immediateMode
+                then p1
+                else elemAt mem p1;
 
+          v2 = if elemAt (op.modes) 1 == immediateMode
+                then p2
+                else elemAt mem p2;
       in { 
         inherit inQ outQ op halted;
         mem = replace mem p3 (add v1 v2);
@@ -35,9 +41,13 @@ let lib = import <nixpkgs/lib>;
           p2 = elemAt mem (iPointer + 1);
           p3 = elemAt mem (iPointer + 2);
 
-          v1 = elemAt mem p1;
-          v2 = elemAt mem p2;
+          v1 = if elemAt (op.modes) 0 == immediateMode
+                then p1
+                else elemAt mem p1;
 
+          v2 = if elemAt (op.modes) 1 == immediateMode
+                then p2
+                else elemAt mem p2;
       in { 
         inherit inQ outQ op halted;
         mem = replace mem p3 (mul v1 v2);
@@ -47,7 +57,8 @@ let lib = import <nixpkgs/lib>;
 
     op3 = {mem, inQ, outQ, op, iPointer, halted}: (
       let dequeueResult = dequeue inQ;
-          p1 = elemAt mem (iPointer + 1);
+          x = builtins.trace (toString mem) mem;
+          p1 = elemAt mem iPointer;
           
       in { 
         inherit outQ op halted;
@@ -58,8 +69,12 @@ let lib = import <nixpkgs/lib>;
     );
 
     op4 = {mem, inQ, outQ, op, iPointer, halted}: (
-      let p1 = elemAt mem (iPointer + 1);
-          newOutQ = enqueue outQ (elemAt mem p1);
+      let p1 = elemAt mem iPointer;
+          v1 = if elemAt (op.modes) 0 == immediateMode
+                then p1
+                else elemAt mem p1;
+
+          newOutQ = enqueue outQ v1;
           
       in { 
         inherit mem inQ op halted;
@@ -68,13 +83,22 @@ let lib = import <nixpkgs/lib>;
       }
     );
 
+    decodeOpModes = opInt: (
+      let opM = div opInt 100;
+      in
+        reverseList (
+          (stringToCharacters 
+          (fixedWidthString 10 "0"
+          (concatStrings 
+          (stringToDigits opM)))))
+    );
+
     decodeOp = {mem, inQ, outQ, op, iPointer, halted}: (
       let opInt = elemAt mem iPointer;
           opV = mod opInt 100;
-          opM = reverseList (stringToDigits (div opInt 100));
-      in { 
-           inherit mem inQ outQ halted;
-           op = {
+          modes = decodeOpModes opInt;
+
+          op = {
              opV = opV;
              call = (
                if opV == 1 then
@@ -88,16 +112,21 @@ let lib = import <nixpkgs/lib>;
                else if opV == 99 then
                  null
                else
-                 abort "Aaaaaahhhh!"
+               abort (concatStrings [
+                 "Aaaaaahhhh! Unknown opcode: "
+                 (toString opV)
+               ])
              );
-             modes = opM;
+             modes = modes;
            };
 
+      in {
+           inherit mem inQ outQ op halted;
            iPointer = iPointer + 1;
          }
     );
 
-    computeStepTest = context: (
+    computeStep = context: (
       let newContext = decodeOp context;
 
           haltConditionTrue =
@@ -108,42 +137,27 @@ let lib = import <nixpkgs/lib>;
                               else newContext.op.call newContext
       );
 
-    compute = mem: inQ: (
-      while (c: !c.halted) computeStepTest
-        { inherit mem inQ; 
-          iPointer = 0;
-          outQ = emptyQueue;
-          halted = false;
-          op = null;
-        }
-    );
+    computeStepTest = context: (
+      let newContext = decodeOp context;
+          haltConditionTrue = newContext.op.opV == 99;
 
+      in if haltConditionTrue then newContext // { halted = true; }
+                              else newContext.op.call newContext
+      );
 
-    # We'll always start at 0, so let's create a helper function for that
-    # We'll also always want to grab the head and return it
-    compute_and_return = (mem: compute mem emptyQueue);
+    initialComputationState = mem: inQ:
+      { inherit mem inQ; 
+        iPointer = 0;
+        outQ = emptyQueue;
+        halted = false;
+        op = null;
+      };
 
+    compute = mem: inQ:
+      while (c: !c.halted) computeStep
+        (initialComputationState mem inQ);
 
-    # Inputs noun and verb into memory to fix the gravity assistance
-    restoreGravityAssist = (mem: noun: verb: 
-      replace (replace mem 1 noun) 2 verb
-    );
+    inputQueue = enqueue emptyQueue 1;
+    part1 = last ((compute memory inputQueue).outQ);
 
-    magicParam1 = 12;
-    magicParam2 = 02;
-
-    # What's the return value of a computation with the magic parameters?
-    part1 = compute_and_return 
-              (restoreGravityAssist memory magicParam1 magicParam2);
-
-
-in strict { inherit part1 ; }
-# in strict (computeStepTest
-#         { mem = memory;
-#           inQ = emptyQueue;
-#           outQ = emptyQueue;
-#           iPointer = 0;
-#           halted = false;
-#           op = null;
-#         }
-#         )
+in strict { inherit part1; }

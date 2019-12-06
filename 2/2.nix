@@ -50,7 +50,6 @@ let lib = import <nixpkgs/lib>;
           v1 = builtins.elemAt mem p1;
           v2 = builtins.elemAt mem p2;
 
-
         in
           let updatedMemory = replace mem p3 (opF v1 v2);
           in computeInstructionsF (iPointer + 4) updatedMemory
@@ -61,12 +60,16 @@ let lib = import <nixpkgs/lib>;
     compute_and_return = (mem: head (computeInstructionsF 0 mem));
 
     # Inputs noun and verb into memory to fix the gravity assistance
-    restoreGravityAssist = (mem: noun: verb: replace (replace mem 1 noun) 2 verb);
+    restoreGravityAssist = (mem: noun: verb:
+      replace (replace mem 1 noun) 2 verb
+    );
 
-    # What's the return value of a computation with the magic parameters?
     magicParam1 = 12;
     magicParam2 = 02;
-    part1 = compute_and_return (restoreGravityAssist memory magicParam1 magicParam2);
+
+    # What's the return value of a computation with the magic parameters?
+    part1 = compute_and_return
+              (restoreGravityAssist memory magicParam1 magicParam2);
 
     # What are the the magic parameters, to get magicNumber as the return value?
     magicNumber = 19690720;
@@ -76,7 +79,8 @@ let lib = import <nixpkgs/lib>;
 
     # Let's try them all
     findRightFix = findFirst 
-        ({fst, snd}: (compute_and_return (restoreGravityAssist memory fst snd)) == magicNumber)
+        ({fst, snd}: compute_and_return
+                       (restoreGravityAssist memory fst snd) == magicNumber)
         (builtins.abort "No solution found. We need to abort!!")
         (cartesianProduct (range 1 99) (range 1 99));
 

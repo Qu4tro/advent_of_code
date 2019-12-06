@@ -16,4 +16,7 @@ let lib = import <nixpkgs/lib>;
 
       in concatStrings (trimBack (trimFront chars))
     );
-in { inherit splitAndMap trim; }
+
+    stringToDigits = str: stringToCharacters (toString str);
+
+in { inherit splitAndMap trim stringToDigits; }

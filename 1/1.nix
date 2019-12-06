@@ -13,7 +13,7 @@ let lib = import <nixpkgs/lib>;
 
     moduleMassList = splitAndMapFromTrimmedFile ./input "\n" toInt;
 
-    fuelPerMass = x: 
+    fuelPerMass = x:
       let result = x / 3 - 2;
       in max 0 result;
 
@@ -23,12 +23,14 @@ let lib = import <nixpkgs/lib>;
         let increment = fuelPerMass lastIncrement;
         in {totalFuel = totalFuel + increment; lastIncrement = increment; };
 
-    rocketEquationSteps = while
-      ({totalFuel, lastIncrement}: lastIncrement > 0)
-      rocketEquationStep;
+    rocketEquationSteps =
+        while (step: step.lastIncrement > 0) rocketEquationStep;
 
-    rocketEquation = moduleMass: 
-      (rocketEquationSteps {totalFuel = 0; lastIncrement = moduleMass;}).totalFuel;
+    rocketEquation = moduleMass: (
+      ( rocketEquationSteps
+          {totalFuel = 0; lastIncrement = moduleMass;}
+      ).totalFuel
+    );
 
     part2 = sum (map rocketEquation moduleMassList);
 

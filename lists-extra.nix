@@ -1,12 +1,12 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    inherit (lib.lists) head tail take drop range length foldl elemAt;
-    inherit (import ./func-extra.nix) minBy;
+    inherit (lib.lists) head tail take drop range length foldl elemAt count zipListsWith;
+    inherit (import ./func-extra.nix) minBy maxBy;
 
     replace = (xs: i: v: (take i xs) ++ [v] ++ (drop (i + 1) xs));
 
-    scanl = (op: accum: list: 
+    scanl = (op: accum: list:
       [accum] ++ (
         if list == [] then [] else
 
@@ -24,7 +24,7 @@ let lib = import <nixpkgs/lib>;
       (cartesianProduct (builtins.tail xs) ys)
     );
 
-    takeWhile = (p: xs: 
+    takeWhile = (p: xs:
       if xs == [] then [] else
 
       let h = head xs;
@@ -33,7 +33,7 @@ let lib = import <nixpkgs/lib>;
                  else []
     );
 
-    dropWhile = (p: xs: 
+    dropWhile = (p: xs:
       if xs == [] then [] else
 
       let h = head xs;
@@ -46,11 +46,17 @@ let lib = import <nixpkgs/lib>;
 
     concat = foldl (a: b: a ++ b) [];
 
-    minimumBy = op: xs: 
+    minimumBy = op: xs:
       let h = head xs;
           t = tail xs;
       in if length xs == 1 then h else
          minBy op h (minimumBy op t);
+
+    maximumBy = op: xs:
+      let h = head xs;
+          t = tail xs;
+      in if length xs == 1 then h else
+         maxBy op h (maximumBy op t);
 
     anyBy2 = pred: xs: (
       if length xs < 2 then false else
@@ -98,4 +104,22 @@ let lib = import <nixpkgs/lib>;
 
     groupIntoList = groupIntoListBy (x: y: x == y);
 
-in { inherit allBy2 anyBy2 cartesianProduct concat dropWhile groupIntoList groupIntoListBy minimumBy replace scanl takeWhile upTo ; }
+    chunks = n: xs: (
+      if xs == [] then [] else
+
+      [(take n xs)] ++ (chunks n (drop n xs))
+    );
+
+    countEqual = x: count (y: x == y);
+
+    zipManyListsWith = f: xs: (
+      if length xs == 1 then head xs else
+
+      let fst = elemAt xs 0;
+          snd = elemAt xs 1;
+          t = drop 2 xs;
+          zippedHead = zipListsWith f fst snd;
+      in zipManyListsWith f ([zippedHead] ++ t)
+    );
+
+in { inherit allBy2 anyBy2 cartesianProduct concat dropWhile groupIntoList groupIntoListBy maximumBy minimumBy replace scanl takeWhile upTo chunks countEqual zipManyListsWith; }

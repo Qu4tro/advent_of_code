@@ -6,14 +6,14 @@ let lib = import <nixpkgs/lib>;
 
     inherit (import ../lazy-extra.nix) strict;
     inherit (import ../lists-extra.nix) groupIntoList allBy2 anyBy2;
-    inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
+    inherit (import ../advent-utils.nix) splitStringAndMapFromTrimmedFile;
 
 
     intToDigits = n: stringToCharacters (toString n);
     isIncrementing = allBy2 (x: y: x <= y);
 
 
-    inputList = splitAndMapFromTrimmedFile ./input "-" toInt;
+    inputList = splitStringAndMapFromTrimmedFile ./input "-" toInt;
     intRange = map intToDigits (range (head inputList) (last inputList));
 
 

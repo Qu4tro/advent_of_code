@@ -6,9 +6,9 @@ let lib = import <nixpkgs/lib>;
 
     inherit (import ../lazy-extra.nix) strict;
     inherit (import ../lists-extra.nix) replace cartesianProduct;
-    inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
+    inherit (import ../advent-icpc.nix) readMemory;
 
-    memory = splitAndMapFromTrimmedFile ./input "," toInt;
+    memory = readMemory ./input;
 
     # Our compute function
     # Params:
@@ -78,7 +78,7 @@ let lib = import <nixpkgs/lib>;
     fixToNum = ({fst, snd}: 100 * fst + snd);
 
     # Let's try them all
-    findRightFix = findFirst 
+    findRightFix = findFirst
         ({fst, snd}: compute_and_return
                        (restoreGravityAssist memory fst snd) == magicNumber)
         (builtins.abort "No solution found. We need to abort!!")

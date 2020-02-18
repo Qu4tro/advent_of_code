@@ -8,9 +8,9 @@ let lib = import <nixpkgs/lib>;
     inherit (import ../math-extra.nix) abs;
     inherit (import ../lazy-extra.nix) strict;
     inherit (import ../lists-extra.nix) concat minimumBy cartesianProduct scanl;
-    inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
+    inherit (import ../advent-utils.nix) splitStringAndMapFromTrimmedFile;
 
-    wires = splitAndMapFromTrimmedFile ./input "\n" (splitString ",");
+    wires = splitStringAndMapFromTrimmedFile ./input "\n" (splitString ",");
     wire1 = head wires;
     wire2 = last wires;
 
@@ -31,16 +31,16 @@ let lib = import <nixpkgs/lib>;
       else abort "Aaaaaahhhh!"
     );
 
-    segmentContainsPoint = ({fst, snd}: {x, y}: 
+    segmentContainsPoint = ({fst, snd}: {x, y}:
       (fst.x == x && (min fst.y snd.y) <= y && (max fst.y snd.y) >= y) ||
       (fst.y == y && (min fst.x snd.x) <= x && (max fst.x snd.x) >= x)
     );
 
     findIntersections = (wire1: wire2:
-      let 
+      let
         crossingPoint = ({fst, snd}:
-          filter (p: segmentContainsPoint fst p && segmentContainsPoint snd p) 
-            (if fst.fst.x == fst.snd.x then 
+          filter (p: segmentContainsPoint fst p && segmentContainsPoint snd p)
+            (if fst.fst.x == fst.snd.x then
               [ {x = fst.fst.x; y = snd.fst.y;}]
              else
               [ {x = snd.fst.x; y = fst.fst.y;}]
@@ -50,9 +50,9 @@ let lib = import <nixpkgs/lib>;
         segments1 = zipLists wire1 (tail wire1);
         segments2 = zipLists wire2 (tail wire2);
 
-        intersections = 
+        intersections =
           remove [] (
-            map crossingPoint 
+            map crossingPoint
             (cartesianProduct segments1 segments2)
           );
 
@@ -94,7 +94,7 @@ let lib = import <nixpkgs/lib>;
             + walkingDistance remainingPath targetPosition
     );
 
-    summedWalkingDistance = (path1: path2: targetPosition: 
+    summedWalkingDistance = (path1: path2: targetPosition:
       walkingDistance path1 targetPosition
       + walkingDistance path2 targetPosition
     );

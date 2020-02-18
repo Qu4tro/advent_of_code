@@ -9,9 +9,9 @@ let lib = import <nixpkgs/lib>;
     inherit (import ../func-extra.nix) while;
     inherit (import ../lazy-extra.nix) strict;
     inherit (import ../lists-extra.nix) replace cartesianProduct;
-    inherit (import ../utils.nix) splitAndMapFromTrimmedFile;
+    inherit (import ../advent-utils.nix) splitStringAndMapFromTrimmedFile;
 
-    moduleMassList = splitAndMapFromTrimmedFile ./input "\n" toInt;
+    moduleMassList = splitStringAndMapFromTrimmedFile ./input "\n" toInt;
 
     fuelPerMass = x:
       let result = x / 3 - 2;

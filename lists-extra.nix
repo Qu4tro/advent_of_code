@@ -1,7 +1,7 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    inherit (lib.lists) head tail take drop range length foldl elemAt count zipListsWith;
+    inherit (lib.lists) head tail take drop range length foldl elemAt count zipListsWith concatMap foldr;
     inherit (import ./func-extra.nix) minBy maxBy;
 
     replace = (xs: i: v: (take i xs) ++ [v] ++ (drop (i + 1) xs));
@@ -122,4 +122,15 @@ let lib = import <nixpkgs/lib>;
       in zipManyListsWith f ([zippedHead] ++ t)
     );
 
-in { inherit allBy2 anyBy2 cartesianProduct concat dropWhile groupIntoList groupIntoListBy maximumBy minimumBy replace scanl takeWhile upTo chunks countEqual zipManyListsWith; }
+    permutations = (
+      let insertEverywhere = x: xs: (
+          if xs == [] then [[x]] else
+
+          let h = head xs;
+              t = tail xs;
+          in [([x] ++ xs)] ++ (map (xs: [h] ++ xs) (insertEverywhere x t))
+      );
+      in foldr (xs: concatMap (insertEverywhere xs)) [[]]
+    );
+
+in { inherit allBy2 anyBy2 cartesianProduct chunks concat countEqual dropWhile groupIntoList groupIntoListBy maximumBy minimumBy permutations replace scanl takeWhile upTo zipManyListsWith; }

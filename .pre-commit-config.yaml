@@ -4,7 +4,10 @@ repos:
       hooks:
       -   id: debug-statements
       -   id: mixed-line-ending
-      -   id: trailing-whitespace
       -   id: check-executables-have-shebangs
       -   id: check-added-large-files
       -   id: check-symlinks
+      -   id: trailing-whitespace
+          exclude: trace$
+
+

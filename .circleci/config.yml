@@ -27,7 +27,7 @@ jobs:
     steps:
       - checkout
       - attach_workspace:
-          at: /
+          at: /nix/store
       - run:
           name: Check Result
           command: |

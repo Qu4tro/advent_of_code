@@ -1,0 +1,87 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine. See: https://circleci.com/docs/2.0/configuration-reference
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: nixos/nix
+
+    # environment:
+    #   NIX_PATH: "nixpkgs=https://github.com/NixOS/nixpkgs/archive/20.03.tar.gz"
+
+    steps:
+      - checkout
+
+      - run:
+          command: nix-channel --add https://nixos.org/channels/nixpkgs-unstable
+      - run:
+          command: nix-channel --update
+      - run:
+          command: nix-env -i diffutils
+
+      - run:
+          name: Day1
+          command: |
+              nix-instantiate --eval 01/1.nix > /tmp/output1
+              diff /tmp/output1 01/output
+
+      - run:
+          name: Day2
+          command: |
+              nix-instantiate --eval 02/2.nix > /tmp/output2
+              diff /tmp/output2 02/output
+
+      - run:
+          name: Day3
+          command: |
+              nix-instantiate --eval 03/3.nix > /tmp/output3
+              diff /tmp/output3 03/output
+
+      - run:
+          name: Day4
+          command: |
+              nix-instantiate --eval 04/4.nix > /tmp/output4
+              diff /tmp/output4 04/output
+
+      - run:
+          name: Day5
+          command: |
+              nix-instantiate --eval 05/5.nix > /tmp/output5
+              diff /tmp/output5 05/output
+
+      - run:
+          name: Day6
+          command: |
+              nix-instantiate --eval 06/6.nix > /tmp/output6
+              diff /tmp/output6 06/output
+
+      - run:
+          name: Day7
+          command: |
+              nix-instantiate --eval 07/7.nix > /tmp/output7
+              diff /tmp/output7 07/output
+
+      - run:
+          name: Day8
+          command: |
+              nix-instantiate --eval 08/8.nix > /tmp/output8
+              diff /tmp/output8 08/output
+
+      # - run:
+      #     name: Day9
+      #     command: |
+      #         nix-instantiate --eval 09/9.nix > /tmp/output9
+      #         diff /tmp/output9 09/output
+
+      # - run:
+      #     name: Day10
+      #     command: |
+      #         nix-instantiate --eval 10/10.nix > /tmp/output10
+      #         diff /tmp/output10 10/output
+
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build

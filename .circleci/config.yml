@@ -70,11 +70,11 @@ jobs:
       #         nix-instantiate --eval 09/9.nix > /tmp/output9
       #         diff /tmp/output9 09/output
 
-      # - run:
-      #     name: Day10
-      #     command: |
-      #         nix-instantiate --eval 10/10.nix > /tmp/output10
-      #         diff /tmp/output10 10/output
+      - run:
+          name: Day10
+          command: |
+              nix-instantiate --eval 10/10.nix > /tmp/output10
+              diff /tmp/output10 10/output
 
 
 workflows:

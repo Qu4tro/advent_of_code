@@ -6,9 +6,6 @@ jobs:
     docker:
       - image: nixos/nix
 
-    # environment:
-    #   NIX_PATH: "nixpkgs=https://github.com/NixOS/nixpkgs/archive/20.03.tar.gz"
-
     steps:
       - checkout
 

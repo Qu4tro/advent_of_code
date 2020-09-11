@@ -5,7 +5,7 @@ let lib = import <nixpkgs/lib>;
     inherit (lib.strings) toInt splitString substring removePrefix;
     inherit (lib.trivial) min max;
 
-    inherit (import ../math-extra.nix) abs;
+    inherit (import ../math-extra.nix) manhattanDistance;
     inherit (import ../lazy-extra.nix) strict;
     inherit (import ../lists-extra.nix) concat minimumBy cartesianProduct scanl;
     inherit (import ../advent-utils.nix) splitStringAndMapFromTrimmedFile;
@@ -13,8 +13,6 @@ let lib = import <nixpkgs/lib>;
     wires = splitStringAndMapFromTrimmedFile ./input "\n" (splitString ",");
     wire1 = head wires;
     wire2 = last wires;
-
-    manhattanDistance = (fst: snd: abs (snd.x - fst.x) + abs (snd.y - fst.y));
 
     applyStep = ({x, y}: step:
       let direction = substring 0 1 step;

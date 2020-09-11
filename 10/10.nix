@@ -2,14 +2,15 @@
 
 let lib = import <nixpkgs/lib>;
     inherit (builtins) readFile length split elem getAttr attrNames filter;
-    inherit (lib.lists) head last remove findFirst reverseList tail concatLists;
+    inherit (lib.lists) head last remove findFirst reverseList tail concatLists unique;
     inherit (lib.strings) splitString stringToCharacters;
     inherit (lib.attrsets) mapAttrs' genAttrs filterAttrs;
 
     inherit (import ../string-extra.nix) trim splitAndMap;
-    inherit (import ../math-extra.nix) sum manhattanDistance slope;
+    inherit (import ../math-extra.nix) maximum;
+    inherit (import ../vector-extra.nix) mkVector2 unit2;
     inherit (import ../lazy-extra.nix) strict;
-    inherit (import ../lists-extra.nix) takeWhile enumerate;
+    inherit (import ../lists-extra.nix) enumerate;
     inherit (import ../advent-utils.nix) splitStringAndMapFromTrimmedFile;
 
     input = splitStringAndMapFromTrimmedFile ./input "\n" stringToCharacters;
@@ -30,27 +31,14 @@ let lib = import <nixpkgs/lib>;
           ) enumeratedLines;
       in concatLists coordinateGrid
     );
+
     asteroidCoordinates =
         map (filterAttrs (n: v: n != "obj"))
           (filter (grid: grid.obj == "#") coordinateGrid);
 
     preprocessAsteroids = (originAsteroid: targetAsteroid:
-      genAttrs ["dx" "dy" "slope" "manhattanDistance"] (attr_name:
-        if attr_name == "dx" then
-          targetAsteroid.x - originAsteroid.x
-        else if attr_name == "dy" then
-          targetAsteroid.y - originAsteroid.y
-        else if attr_name == "slope" then
-          slope originAsteroid targetAsteroid
-        else if attr_name == "manhattanDistance" then
-          manhattanDistance originAsteroid targetAsteroid
-        else
-          abort "Aaaaaahhhh"
-        )
-    );
-
-    isVisibleFrom = (allAsteroids: originAsteroid: targetAsteroid:
-      0
+      let unit = unit2 (mkVector2 originAsteroid targetAsteroid);
+      in {x1 = toString unit.x1; x2 = toString unit.x2;}
     );
 
     countVisibleAsteroid =
@@ -59,9 +47,11 @@ let lib = import <nixpkgs/lib>;
         let
           asteroids = remove initialAsteroidCoordinate allAsteroidCoordinates;
           preprocessedAsteroids = map (preprocessAsteroids initialAsteroidCoordinate) asteroids;
-        in preprocessedAsteroids
+          nVisibleAsteroids = length (unique preprocessedAsteroids);
+        in nVisibleAsteroids
     );
 
 
-    part1 = map (countVisibleAsteroid asteroidCoordinates) asteroidCoordinates;
+    part1 = maximum (map (countVisibleAsteroid asteroidCoordinates) asteroidCoordinates);
+
 in strict { inherit part1; }

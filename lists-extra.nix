@@ -1,8 +1,10 @@
 #!/usr/bin/nix-instantiate --eval
 
 let lib = import <nixpkgs/lib>;
-    inherit (lib.lists) head tail take drop range length foldl elemAt count zipLists zipListsWith concatMap foldr;
+    inherit (builtins) elem;
+    inherit (lib.lists) head tail take drop range length foldl elemAt count zipLists zipListsWith concatMap foldr filter;
     inherit (import ./func-extra.nix) minBy maxBy;
+    inherit (import ./bool-extra.nix) not;
 
     replace = (xs: i: v: (take i xs) ++ [v] ++ (drop (i + 1) xs));
 
@@ -137,4 +139,38 @@ let lib = import <nixpkgs/lib>;
       in foldr (xs: concatMap (insertEverywhere xs)) [[]]
     );
 
-in { inherit allBy2 anyBy2 cartesianProduct chunks concat countEqual dropWhile enumerate groupIntoList groupIntoListBy maximumBy minimumBy permutations replace scanl takeWhile upTo zipManyListsWith; }
+    removeMany = deny: xs: (
+      filter (x: not (elem x deny)) xs
+    );
+
+    uniqueBy = f: xs: (
+      if xs == [] then [] else
+
+      let x = head xs;
+      in [x] ++ uniqueBy f (filter (y: f y != f x) (tail xs))
+    );
+
+    rotate = n: xs: (
+      if length xs < 2 then xs else
+      if n == 0 then xs else
+
+      let h = head xs;
+          t = tail xs;
+      in rotate (n - 1) (t ++ [h])
+    );
+
+    rotateUntil = p: xs: (
+      if length xs < 2 then xs else
+
+      let succeeded = p (head xs);
+      in if succeeded then xs else rotateUntil p (rotate 1 xs)
+    );
+
+    rotateUntil2 = p: xs: (
+      if length xs < 2 then xs else
+
+      let succeeded = p (head xs) (head tail xs);
+      in if succeeded then xs else rotateUntil2 p (rotate 1 xs)
+    );
+
+in { inherit allBy2 anyBy2 cartesianProduct chunks concat countEqual dropWhile enumerate groupIntoList groupIntoListBy maximumBy minimumBy permutations replace removeMany scanl takeWhile upTo uniqueBy zipManyListsWith rotate rotateUntil rotateUntil2; }
